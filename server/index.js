@@ -67,6 +67,14 @@ const readLimiter = rateLimit({
   message: { success: false, error: 'Too many requests. Try again in a moment.' },
 });
 
+const betaLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many attempts. Try again in a few minutes.' },
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() });
@@ -78,7 +86,7 @@ app.use('/api/auth/register', authLimiter);
 app.use('/api/auth/refresh', refreshLimiter);
 app.use('/api/auth/forgot-password', authLimiter);
 app.use('/api/auth/reset-password', authLimiter);
-app.use('/api/auth/beta', authLimiter);
+app.use('/api/auth/beta', betaLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/log', logLimiter, logRoutes);
 app.use('/api/dashboard', readLimiter, dashboardRoutes);
