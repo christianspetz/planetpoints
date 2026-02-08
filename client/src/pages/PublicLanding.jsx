@@ -245,12 +245,6 @@ export default function PublicLanding() {
 
       {/* Footer */}
       <footer className="pub-footer">
-        <div className="pub-footer-links">
-          <a href="#about">About</a>
-          <a href="#privacy">Privacy</a>
-          <a href="#terms">Terms</a>
-          <a href="#contact">Contact</a>
-        </div>
         <div className="pub-footer-brand">Made with 🌱 for the planet</div>
       </footer>
     </div>

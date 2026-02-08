@@ -9,6 +9,7 @@ export default function History() {
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [confirmId, setConfirmId] = useState(null);
   const toast = useToast();
 
   const materialEmoji = {};
@@ -32,9 +33,9 @@ export default function History() {
   useEffect(() => { fetchLogs(1); }, []);
 
   const handleDelete = async (id) => {
-    if (!confirm('Remove this log entry?')) return;
     try {
       await apiFetch(`/log/${id}`, { method: 'DELETE' });
+      setConfirmId(null);
       toast('Log entry removed.');
       fetchLogs(page);
     } catch (err) {
@@ -66,7 +67,14 @@ export default function History() {
                   </span>
                   <span className="log-date">{new Date(log.logged_at).toLocaleString()}</span>
                 </div>
-                <button className="btn-delete" onClick={() => handleDelete(log.id)}>Remove</button>
+                {confirmId === log.id ? (
+                  <span className="confirm-delete">
+                    <button className="btn-delete-yes" onClick={() => handleDelete(log.id)}>Yes, remove</button>
+                    <button className="btn-delete-no" onClick={() => setConfirmId(null)}>Cancel</button>
+                  </span>
+                ) : (
+                  <button className="btn-delete" onClick={() => setConfirmId(log.id)}>Remove</button>
+                )}
               </div>
             ))}
           </div>

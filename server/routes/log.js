@@ -66,7 +66,10 @@ async function checkAndAwardBadges(userId) {
 
 // POST /api/log
 router.post('/', authenticate, validateLog, async (req, res) => {
+  const client = await pool.connect();
   try {
+    await client.query('BEGIN');
+
     const { material_type, item_count } = req.body;
     const material = MATERIALS[material_type];
 
@@ -74,7 +77,7 @@ router.post('/', authenticate, validateLog, async (req, res) => {
     const water_saved_l = item_count * material.weight_kg * material.water_per_kg;
 
     // Insert log
-    const logResult = await pool.query(
+    const logResult = await client.query(
       `INSERT INTO recycling_logs (user_id, material_type, item_count, carbon_saved_kg, water_saved_l)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id, material_type, item_count, carbon_saved_kg, water_saved_l, logged_at`,
@@ -83,7 +86,7 @@ router.post('/', authenticate, validateLog, async (req, res) => {
 
     // Update user totals and streak
     const today = new Date().toISOString().split('T')[0];
-    const userResult = await pool.query('SELECT streak_last_log_date, streak_current, streak_best FROM users WHERE id = $1', [req.userId]);
+    const userResult = await client.query('SELECT streak_last_log_date, streak_current, streak_best FROM users WHERE id = $1', [req.userId]);
     const user = userResult.rows[0];
 
     let newStreak = user.streak_current;
@@ -105,7 +108,7 @@ router.post('/', authenticate, validateLog, async (req, res) => {
 
     const newBest = Math.max(newStreak, user.streak_best);
 
-    await pool.query(
+    await client.query(
       `UPDATE users SET
          total_carbon_saved = total_carbon_saved + $1,
          total_water_saved = total_water_saved + $2,
@@ -123,36 +126,36 @@ router.post('/', authenticate, validateLog, async (req, res) => {
     let evolution = null;
     const pointsEarned = (ANIMAL_POINTS[material_type] || 3) * item_count;
 
-    const animalUser = await pool.query(
+    const animalUser = await client.query(
       'SELECT selected_animal_id, animal_points FROM users WHERE id = $1',
       [req.userId]
     );
 
     if (animalUser.rows[0].selected_animal_id) {
       const newPoints = animalUser.rows[0].animal_points + pointsEarned;
-      await pool.query('UPDATE users SET animal_points = $1 WHERE id = $2', [newPoints, req.userId]);
+      await client.query('UPDATE users SET animal_points = $1 WHERE id = $2', [newPoints, req.userId]);
 
       // Check for evolution
-      const ua = await pool.query(
+      const ua = await client.query(
         'SELECT current_stage FROM user_animals WHERE user_id = $1 AND animal_id = $2',
         [req.userId, animalUser.rows[0].selected_animal_id]
       );
 
       if (ua.rows.length > 0) {
         const currentStage = ua.rows[0].current_stage;
-        const nextStage = await pool.query(
+        const nextStage = await client.query(
           `SELECT * FROM animal_stages WHERE animal_id = $1 AND stage_number = $2`,
           [animalUser.rows[0].selected_animal_id, currentStage + 1]
         );
 
         if (nextStage.rows.length > 0 && newPoints >= nextStage.rows[0].points_required) {
           const newStageNum = currentStage + 1;
-          await pool.query(
+          await client.query(
             'UPDATE user_animals SET current_stage = $1 WHERE user_id = $2 AND animal_id = $3',
             [newStageNum, req.userId, animalUser.rows[0].selected_animal_id]
           );
 
-          const animalInfo = await pool.query(
+          const animalInfo = await client.query(
             'SELECT name, emoji FROM animals WHERE id = $1',
             [animalUser.rows[0].selected_animal_id]
           );
@@ -167,6 +170,8 @@ router.post('/', authenticate, validateLog, async (req, res) => {
       }
     }
 
+    await client.query('COMMIT');
+
     res.status(201).json({
       success: true,
       data: {
@@ -178,8 +183,11 @@ router.post('/', authenticate, validateLog, async (req, res) => {
       },
     });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Log create error:', err);
     res.status(500).json({ success: false, error: 'Something went wrong on our end. Give it another try in a moment.' });
+  } finally {
+    client.release();
   }
 });
 
@@ -218,21 +226,25 @@ router.get('/', authenticate, async (req, res) => {
 
 // DELETE /api/log/:id
 router.delete('/:id', authenticate, async (req, res) => {
+  const client = await pool.connect();
   try {
-    const result = await pool.query(
+    await client.query('BEGIN');
+
+    const result = await client.query(
       `DELETE FROM recycling_logs WHERE id = $1 AND user_id = $2
        RETURNING carbon_saved_kg, water_saved_l`,
       [req.params.id, req.userId]
     );
 
     if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ success: false, error: 'Log not found.' });
     }
 
     const { carbon_saved_kg, water_saved_l } = result.rows[0];
 
     // Subtract from user totals
-    await pool.query(
+    await client.query(
       `UPDATE users SET
          total_carbon_saved = GREATEST(0, total_carbon_saved - $1),
          total_water_saved = GREATEST(0, total_water_saved - $2)
@@ -240,10 +252,14 @@ router.delete('/:id', authenticate, async (req, res) => {
       [carbon_saved_kg, water_saved_l, req.userId]
     );
 
+    await client.query('COMMIT');
     res.json({ success: true, data: { message: 'Log deleted' } });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Log delete error:', err);
     res.status(500).json({ success: false, error: 'Something went wrong on our end. Give it another try in a moment.' });
+  } finally {
+    client.release();
   }
 });
 

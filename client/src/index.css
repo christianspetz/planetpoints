@@ -205,6 +205,74 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--text-muted);
   gap: 8px;
 }
+.loading::before {
+  content: '';
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== Error Boundary ===== */
+.error-boundary-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 32px;
+  text-align: center;
+  background: var(--bg);
+}
+.error-boundary-page .error-boundary-icon {
+  font-size: 4rem;
+  margin-bottom: 16px;
+}
+.error-boundary-page h1 {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  margin-bottom: 8px;
+}
+.error-boundary-page p {
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  max-width: 320px;
+}
+
+/* ===== 404 Page ===== */
+.not-found-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 32px;
+  text-align: center;
+}
+.not-found-page .not-found-emoji {
+  font-size: 5rem;
+  margin-bottom: 16px;
+  animation: breathe 3s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+.not-found-page h1 {
+  font-family: var(--font-heading);
+  font-size: 1.75rem;
+  margin-bottom: 8px;
+}
+.not-found-page p {
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  max-width: 320px;
+}
 
 /* ===== Card ===== */
 .card {
@@ -839,6 +907,32 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-delete:hover { background: var(--error-light); }
+
+.confirm-delete {
+  display: flex;
+  gap: 6px;
+}
+.btn-delete-yes {
+  border: none;
+  background: var(--error);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+}
+.btn-delete-no {
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+}
+.btn-delete-yes:hover { background: #c0503a; }
+.btn-delete-no:hover { background: var(--bg); }
 
 .pagination {
   display: flex;

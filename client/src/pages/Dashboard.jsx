@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
@@ -66,6 +66,13 @@ export default function Dashboard() {
 
   const materialEmoji = {};
   MATERIAL_OPTIONS.forEach((m) => (materialEmoji[m.key] = m.emoji));
+
+  // Lock body scroll when bottom sheet is open
+  useLayoutEffect(() => {
+    if (sheetOpen) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = '';
+    return () => { document.body.style.overflow = ''; };
+  }, [sheetOpen]);
 
   const fetchData = useCallback(async () => {
     try {

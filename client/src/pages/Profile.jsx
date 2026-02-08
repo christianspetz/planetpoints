@@ -126,11 +126,6 @@ export default function Profile() {
           <label>Email</label>
           <span>{profile.email}</span>
         </div>
-        <div className="profile-field">
-          <label>Member Since</label>
-          <span>{new Date(profile.created_at).toLocaleDateString()}</span>
-        </div>
-
         {/* Plan section */}
         <div className="profile-field">
           <label>Your Plan</label>

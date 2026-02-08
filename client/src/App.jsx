@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Component } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ToastProvider } from './hooks/useToast';
 import Navbar from './components/Navbar';
@@ -18,6 +19,38 @@ import Collection from './pages/Collection';
 import Premium from './pages/Premium';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentCancel from './pages/PaymentCancel';
+
+class ErrorBoundary extends Component {
+  state = { hasError: false };
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(err) { console.error('App crash:', err); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="error-boundary-page">
+          <div className="error-boundary-icon">🌿</div>
+          <h1>Something went wrong</h1>
+          <p>The app ran into an unexpected error. Try refreshing the page.</p>
+          <button className="btn btn-primary" onClick={() => window.location.reload()}>
+            Refresh Page
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function NotFound() {
+  return (
+    <div className="not-found-page">
+      <div className="not-found-emoji">🐼</div>
+      <h1>Page Not Found</h1>
+      <p>This page doesn't exist — but your recycling journey does!</p>
+      <Link to="/" className="btn btn-primary">Go Home</Link>
+    </div>
+  );
+}
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -63,7 +96,7 @@ function AppRoutes() {
           <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
           <Route path="/payment/success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
           <Route path="/payment/cancel" element={<ProtectedRoute><PaymentCancel /></ProtectedRoute>} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
     </>
@@ -72,12 +105,14 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <ToastProvider>
-          <AppRoutes />
-        </ToastProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <ToastProvider>
+            <AppRoutes />
+          </ToastProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

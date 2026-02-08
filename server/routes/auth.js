@@ -79,12 +79,12 @@ router.post('/login', validateLogin, async (req, res) => {
 
     const access_token = generateAccessToken(user);
     const refresh_token = generateRefreshToken();
-    const refreshExpiry = remember_me ? '30 days' : '7 days';
+    const refreshDays = remember_me ? 30 : 7;
 
     await pool.query(
       `INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
-       VALUES ($1, $2, NOW() + INTERVAL '${refreshExpiry}')`,
-      [user.id, hashToken(refresh_token)]
+       VALUES ($1, $2, NOW() + make_interval(days => $3))`,
+      [user.id, hashToken(refresh_token), refreshDays]
     );
 
     res.json({
@@ -272,8 +272,14 @@ router.post('/beta', (req, res) => {
     return res.status(422).json({ success: false, error: 'Password is required.' });
   }
 
-  if (password === betaPassword) {
-    return res.json({ success: true, data: { granted: true } });
+  try {
+    const a = Buffer.from(password);
+    const b = Buffer.from(betaPassword);
+    if (a.length === b.length && crypto.timingSafeEqual(a, b)) {
+      return res.json({ success: true, data: { granted: true } });
+    }
+  } catch {
+    // length mismatch or encoding error — fall through to rejection
   }
 
   res.status(401).json({ success: false, error: 'Incorrect beta password.' });
